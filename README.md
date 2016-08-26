@@ -44,8 +44,8 @@ The last command above will return the AWS Access Keys for the new user. Save th
 Next, configure the access permissions for the new IAM user. The policy files are providedm but they must be edited before they can be used: `bucket_policy.json` and `sns_policy.json`.
 
 ```sh
-aws iam put-user-policy --user-name backupAgent    --policy-name accessS3 --policy-document file://bucket_policy.json
-aws iam put-user-policy --user-name backupAgent    --policy-name accessS3 --policy-document file://sns_policy.json
+aws iam put-user-policy --user-name backupAgent --policy-name accessS3 --policy-document file://bucket_policy.json
+aws iam put-user-policy --user-name backupAgent --policy-name accessS3 --policy-document file://sns_policy.json
 ```
 
 Subscribe to the SNS Topic to receive notifications:
