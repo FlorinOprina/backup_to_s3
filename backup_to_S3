@@ -1,0 +1,89 @@
+#!/bin/bash
+#Backup utility for AWS
+#Requires AWS CLI to be installed (pip install awscli)
+#Author: florin.oprina@gmail.com
+
+# CONFIGURE THE VARIABLES AS NEEDED
+###################################
+export PATH=$PATH:/usr/local/bin
+#ADD YOUR AWS CREDENTIALS HERE (must have write perms to the bucket and perms to publish to SNS):
+export AWS_ACCESS_KEY_ID=""
+export AWS_SECRET_ACCESS_KEY=""
+BUCKET="" # <- Name of the bucket you want to backup to
+SNSARN="" # <- ARN of the SNS topic that'll warn you if there's an error
+REGION="" # <- AWS Region of your resources
+LOGFILE="/var/log/backup_to_s3.log"
+FREQ=$1 #backup in the daily/weekly/monthly folder. Runtime argument.
+DATE=`date +"%Y-%m-%d"`
+
+#The $SITES array represents folders under /var/www/html. Add as needed.
+SITES=(
+"example.com"
+"public_html"
+)
+
+#Add databases as needed.
+DATABASES=(
+"example_db1"
+"example_db2"
+)
+
+# CONFIGURATON SECTION ENDS HERE
+################################
+
+#In the event of an error, this function sends a notification to $SNSARN, if set.
+#$SNSARN is the ARN name of the SNS topic of your choice.
+function checkError {
+        if [ $? -ne 0 ] && [ -n "$SNSARN" ]
+                then
+                        aws sns publish \
+                        --topic-arn "$SNSARN" \
+                        --subject "AWS Error Message" \
+                        --message "There was an error backing up the files to S3 on $SITEi $DB. Please check the log $LOGFILE." \
+                        --region $REGION
+        fi
+        exit 1
+}
+
+
+
+if [[ -z $1 ]]
+        then
+        echo "Please specify one of the following args: daily, weekly or monthly";
+        exit 1;
+        fi
+
+###
+# Now we start the backup itself.
+###
+
+cd /tmp
+
+#we need any errors from the pipe, too:
+set -o pipefail
+
+#backup config files in /etc
+tar czf $DATE-etc.tar.gz /etc 2>> "$LOGFILE" || checkError
+aws s3 mv $DATE-etc.tar.gz s3://$BUCKET/$FREQ/etc/ --region $REGION 2>> "$LOGFILE" || checkError
+
+
+#backup sites
+
+for SITE in ${SITES[@]}
+
+  do tar czf $DATE-$SITE.tar.gz /var/www/html/$SITE 2>> "$LOGFILE" || checkError
+  aws s3 mv $DATE-$SITE.tar.gz  s3://$BUCKET/$FREQ/sites/ --region $REGION 2>> "$LOGFILE" || checkError
+
+done
+
+#backup databases
+#the script uses the password from /root/.my.cnf
+for DB in ${DATABASES[@]}
+
+
+  do mysqldump $DB | gzip > $DATE-$DB.gz 2>> "$LOGFILE" || checkError
+  aws s3 mv $DATE-$DB.gz s3://$BUCKET/$FREQ/databases/ --region $REGION 2>> "$LOGFILE" || checkError
+
+done
+
+# EOF

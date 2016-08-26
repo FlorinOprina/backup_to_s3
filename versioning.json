@@ -1,0 +1,37 @@
+{
+    "Rules": [
+    	{
+    		"Status": "Enabled",
+            "Prefix": "weekly/",
+            "ID": "keep31",
+            "Expiration": {
+        "Days": 31
+      },
+            "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      }
+    	},
+    	{
+    		"Status": "Enabled",
+            "Prefix": "daily/",
+            "ID": "keep7",
+            "Expiration": {
+        "Days": 7
+      },
+            "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      }
+    	},
+    	{
+    		"Status": "Enabled",
+            "Prefix": "monthly/",
+            "ID": "keep365",
+            "Expiration": {
+        "Days": 365
+      },
+            "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      }
+    	}
+    ]
+}
