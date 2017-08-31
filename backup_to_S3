@@ -42,7 +42,7 @@ function checkError {
                         aws sns publish \
                         --topic-arn "$SNSARN" \
                         --subject "AWS Error Message" \
-                        --message "There was an error backing up the files to S3 on $SITEi $DB. Please check the log $LOGFILE." \
+                        --message "There was an error on $HOSTNAME when backing up the files to S3 on $DIR. Please check the log $LOGFILE." \
                         --region $REGION
         fi
         exit 1
