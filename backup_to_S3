@@ -2,6 +2,7 @@
 #Backup utility for AWS
 #Requires AWS CLI to be installed (pip install awscli)
 #Author: florin.oprina@gmail.com
+# get the latest and greatest from https://github.com/FlorinOprina/backup_to_s3
 
 # CONFIGURE THE VARIABLES AS NEEDED
 ###################################
@@ -14,12 +15,13 @@ SNSARN="" # <- ARN of the SNS topic that'll warn you if there's an error
 REGION="" # <- AWS Region of your resources
 LOGFILE="/var/log/backup_to_s3.log"
 FREQ=$1 #backup in the daily/weekly/monthly folder. Runtime argument.
-DATE=`date +"%Y-%m-%d"`
+DATE=$(date +"%Y-%m-%d")
+PREFIX="bisftp"  #folder where to put the backups in the bucket
 
-#The $SITES array represents folders under /var/www/html. Add as needed.
-SITES=(
-"example.com"
-"public_html"
+#The $DIRS array represents folders to backup. Add as needed.
+DIRS=(
+"/home/user"
+"/var/www/html"
 )
 
 #Add databases as needed.
@@ -30,6 +32,7 @@ DATABASES=(
 
 # CONFIGURATON SECTION ENDS HERE
 ################################
+
 
 #In the event of an error, this function sends a notification to $SNSARN, if set.
 #$SNSARN is the ARN name of the SNS topic of your choice.
@@ -45,6 +48,12 @@ function checkError {
         exit 1
 }
 
+
+if ! (command -v aws > /dev/null 2>&1)
+  then
+    "Aws cli utilities not found. Install them with e.g. pip install awscli";
+    exit 1
+fi
 
 
 if [[ -z $1 ]]
@@ -69,10 +78,11 @@ aws s3 mv $DATE-etc.tar.gz s3://$BUCKET/$FREQ/etc/ --region $REGION 2>> "$LOGFIL
 
 #backup sites
 
-for SITE in ${SITES[@]}
+for ITEM in ${DIRS[@]}
 
-  do tar czf $DATE-$SITE.tar.gz /var/www/html/$SITE 2>> "$LOGFILE" || checkError
-  aws s3 mv $DATE-$SITE.tar.gz  s3://$BUCKET/$FREQ/sites/ --region $REGION 2>> "$LOGFILE" || checkError
+  do DIR=$(echo $ITEM  | sed -e 's/^\///' -e 's/\/$//' -e 's/\//-/g') # get rid of slashes, if any
+  tar czf $DATE-$DIR.tar.gz $ITEM 2>> "$LOGFILE" || checkError
+  aws s3 mv $DATE-$DIR.tar.gz  s3://$BUCKET/$PREFIX/$FREQ/site --region $REGION 2>> "$LOGFILE" || checkError
 
 done
 
@@ -82,7 +92,7 @@ for DB in ${DATABASES[@]}
 
 
   do mysqldump $DB | gzip > $DATE-$DB.gz 2>> "$LOGFILE" || checkError
-  aws s3 mv $DATE-$DB.gz s3://$BUCKET/$FREQ/databases/ --region $REGION 2>> "$LOGFILE" || checkError
+  aws s3 mv $DATE-$DB.gz s3://$BUCKET/$PREFIX/$FREQ/databases/ --region $REGION 2>> "$LOGFILE" || checkError
 
 done
 
